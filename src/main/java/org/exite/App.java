@@ -1,4 +1,4 @@
-package org.exite.SoapAPIJConnector;
+package org.exite;
 
 /**
  * Hello world!
