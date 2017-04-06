@@ -35,7 +35,8 @@ public class Connector
 		/**/
 		timeFrom=LocalDateTime.now().minusDays(10).format(DateTimeFormatter.ofPattern("YYYY-MM-dd HH:mm:ss"));
 		timeTo=LocalDateTime.now().format(DateTimeFormatter.ofPattern("YYYY-MM-dd HH:mm:ss"));
-		/**/		
+		/**/
+		
 		/**/
 		docTypes=new HashMap<String,String>();		
 		docTypes.put("ON_SFAKT", "sfakt_");
