@@ -17,9 +17,12 @@ public class Config
 	@XmlElement
 	public Cryptex cryptex;
 	@XmlElement
+	public Proxy proxy;
+	@XmlElement
 	public Logger logger;
 	@Override
 	public String toString() {
-		return "Config [soap=" + soap + ", rest=" + rest + ", cryptex=" + cryptex + ", logger=" + logger + "]";
-	}	
+		return "Config [soap=" + soap + ", rest=" + rest + ", cryptex=" + cryptex + ", proxy=" + proxy + ", logger="
+				+ logger + "]";
+	}		
 }

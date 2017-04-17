@@ -7,6 +7,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.http.HttpHost;
 import org.apache.log4j.Logger;
 import org.exite.RestExAPI.IRestExAPI;
 import org.exite.RestExAPI.RestExAPI;
@@ -18,6 +19,7 @@ import org.exite.cryptex.client.CryptoClient;
 import org.exite.obj.Config;
 import org.exite.obj.Entity;
 import org.exite.obj.Event;
+import org.exite.obj.EventListMode;
 
 public class Controller 
 {
@@ -101,6 +103,28 @@ public class Controller
 			return true;
 		} catch (RestExAPIEcxeption e) 
 		{
+			log.error(e.getMessage()+" doc uuid ["+docId+"]");
+			return false;
+		}		
+	}
+	public boolean confirmUpdUkdTitul(String docId)
+	{
+		try {
+			String titul=api.generateUPDAnswer(authToken, 
+					docId, 
+					conf.cryptex.signer.signer_name, 
+					conf.cryptex.signer.signer_surName, 
+					conf.cryptex.signer.signer_orgUnit, 
+					conf.cryptex.signer.signer_org_inn, 
+					"Товары переданы", 
+					"Должностные обязанности", 
+					3, 
+					2);
+			api.sendTicket(authToken, docId, titul, getStringSignBody(titul));
+			log.info("["+docId+"] confirmed (titul) .");
+			return true;
+		} catch (RestExAPIEcxeption e) 
+		{
 			log.error(e.getMessage());
 			return false;
 		}		
@@ -137,15 +161,48 @@ public class Controller
 		}
 		return list;
 	}
+	public List<String>getEventUUIDList(String timeFrom, String timeTo,EventListMode mode, String filter)
+	{
+		List<String>list=new LinkedList<String>();
+		try 
+		{
+			for (Event e : api.getEvents(authToken, timeFrom, timeTo, mode))
+				if(!e.event_status.contains("ERROR"))
+					if(api.getDocInfo(authToken, e.document_id).doc_type.equals(filter))
+						if(e.need_reply_reciept)
+							list.add(e.document_id);
+		} catch (RestExAPIEcxeption e) 
+		{
+			log.error(e.getMessage());
+		}
+		return list;
+	}
 	public List<String>getEventUUIDList(String timeFrom, String timeTo, Set<String> filterSet)
 	{
 		List<String>list=new LinkedList<String>();
 		try 
 		{
 			for (Event e : api.getEvents(authToken, timeFrom, timeTo))
-				if(filterSet.contains(api.getDocInfo(authToken, e.document_id).doc_type))
-					if(e.need_reply_reciept && e.event_status.contains("RECIEVED"))
-						list.add(e.document_id);
+				if(!e.event_status.contains("ERROR"))
+					if(filterSet.contains(api.getDocInfo(authToken, e.document_id).doc_type))
+						if(e.need_reply_reciept && e.event_status.contains("RECIEVED"))
+							list.add(e.document_id);
+		} catch (RestExAPIEcxeption e) 
+		{
+			log.error(e.getMessage());
+		}
+		return list;
+	}
+	public List<String>getEventUUIDList(String timeFrom, String timeTo, EventListMode mode, Set<String> filterSet)
+	{
+		List<String>list=new LinkedList<String>();
+		try 
+		{
+			for (Event e : api.getEvents(authToken, timeFrom, timeTo, mode))
+				if(!e.event_status.contains("ERROR"))
+					if(filterSet.contains(api.getDocInfo(authToken, e.document_id).doc_type))
+						if(e.need_reply_reciept && e.event_status.contains("RECIEVED"))
+							list.add(e.document_id);
 		} catch (RestExAPIEcxeption e) 
 		{
 			log.error(e.getMessage());
@@ -169,7 +226,7 @@ public class Controller
 	{		
 		try 
 		{
-			this.api=new RestExAPI();
+			this.api=conf.proxy!=null?new RestExAPI(new HttpHost(conf.proxy.host, conf.proxy.port)):new RestExAPI();
 			this.authToken=api.authorize(conf.rest.get(0).login, conf.rest.get(0).password);
 			this.soapEsf=new SoapExAPI(conf.soap.get(0).login,conf.soap.get(0).password);
 			this.soapInvoice=new SoapExAPI(conf.soap.get(1).login,conf.soap.get(1).password);

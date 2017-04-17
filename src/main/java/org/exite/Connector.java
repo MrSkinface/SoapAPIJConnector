@@ -1,3 +1,4 @@
+
 package org.exite;
 
 import java.io.FileInputStream;
@@ -13,6 +14,7 @@ import javax.xml.bind.Unmarshaller;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 import org.exite.obj.Config;
+import org.exite.obj.EventListMode;
 
 public class Connector 
 {
@@ -33,19 +35,25 @@ public class Connector
 		conf.cryptex.signer.checkFromCertSigner(conf.cryptex);		
 		controller=new Controller(conf);
 		/**/
-		timeFrom=LocalDateTime.now().minusDays(10).format(DateTimeFormatter.ofPattern("YYYY-MM-dd HH:mm:ss"));
+		timeFrom=LocalDateTime.now().minusDays(2).format(DateTimeFormatter.ofPattern("YYYY-MM-dd HH:mm:ss"));
 		timeTo=LocalDateTime.now().format(DateTimeFormatter.ofPattern("YYYY-MM-dd HH:mm:ss"));
 		/**/
 		
 		/**/
 		docTypes=new HashMap<String,String>();		
-		docTypes.put("ON_SFAKT", "sfakt_");
-		docTypes.put("ON_KORSFAKT", "korsfakt_");
+		if(LocalDateTime.now().isBefore(LocalDateTime.of(2017, 07, 01, 00, 00)))
+		{
+			docTypes.put("ON_SFAKT", "sfakt_");
+			docTypes.put("ON_KORSFAKT", "korsfakt_");			
+		}
 		docTypes.put("ON_SCHFDOPPR", "upd_");
+		docTypes.put("ON_KORSCHFDOPPR", "ukd_");
 		docTypes.put("DP_PDOTPR", null);
 		/**/
 		
+		System.out.println(conf.toString());
 		handleDocs();
+		
 		
 		log.info("end");
 	}
@@ -53,7 +61,7 @@ public class Connector
 	{
 		for (String fileName : controller.getList("DP_IZVPOL_")) 
 			controller.removeSoapDoc(fileName);
-		for (String uuid : controller.getEventUUIDList(timeFrom, timeTo, docTypes.keySet()))
+		for (String uuid : controller.getEventUUIDList(timeFrom, timeTo, EventListMode.ESF_UPD, docTypes.keySet()))
 			if(controller.confirmEdoDoc(uuid))
 			{
 				for (String fileName : controller.getList(uuid))
@@ -61,6 +69,8 @@ public class Connector
 				String docType=docTypes.get(controller.getEventType(uuid));
 				if(docType!=null)
 				{
+					/*if(docType=="upd_" || docType=="ukd_")
+						controller.confirmUpdUkdTitul(uuid);*/
 					byte[]docBody=controller.getDocContent(uuid);
 					String fileName=docType+uuid+".xml";
 					controller.sendSoapDoc(fileName, docBody);
