@@ -53,6 +53,25 @@ public class Controller
 		}
 		return list;
 	}
+	public List<String>getList(Set<String> filterSet)
+	{
+		List<String>list=new LinkedList<String>();
+		try 
+		{
+			for (String string : soapEsf.getList()) 
+			{				
+				String[]parts=string.split("_");
+				if((string.endsWith(".xml"))||(string.endsWith(".zip")))
+					if((parts[0].equals("ON"))||(parts[0].equals("DP")))
+						if(filterSet.contains(parts[0]+"_"+parts[1]))
+							list.add(parts[5].replace(".zip", "").replace(".xml", ""));
+			}			
+		} catch (SoapExAPIException e) 
+		{			
+			log.error(e.getMessage());
+		}
+		return list;
+	}
 	public boolean removeSoapDoc(String fileName)
 	{
 		try 
@@ -104,6 +123,11 @@ public class Controller
 		} catch (RestExAPIEcxeption e) 
 		{
 			log.error(e.getMessage()+" doc uuid ["+docId+"]");
+			if(e.getMessage().contains(""))
+			{				
+				for (String fileName : getList(docId))
+					removeSoapDoc(fileName);
+			}
 			return false;
 		}		
 	}

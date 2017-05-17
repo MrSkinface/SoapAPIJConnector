@@ -13,8 +13,13 @@ public class Auth
 	public String login;
 	@XmlElement
 	public String password;
+	@XmlElement
+	public long fromMinus;
+	@XmlElement
+	public long toPlus;
 	@Override
 	public String toString() {
-		return "Auth [login=" + login + ", password=" + password + "]";
-	}	
+		return "Auth [login=" + login + ", password=" + password + ", fromMinus=" + fromMinus + ", toPlus=" + toPlus
+				+ "]";
+	}		
 }

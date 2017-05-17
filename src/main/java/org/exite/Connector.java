@@ -6,6 +6,8 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 import javax.xml.bind.JAXBContext;
@@ -35,8 +37,8 @@ public class Connector
 		conf.cryptex.signer.checkFromCertSigner(conf.cryptex);		
 		controller=new Controller(conf);
 		/**/
-		timeFrom=LocalDateTime.now().minusDays(2).format(DateTimeFormatter.ofPattern("YYYY-MM-dd HH:mm:ss"));
-		timeTo=LocalDateTime.now().format(DateTimeFormatter.ofPattern("YYYY-MM-dd HH:mm:ss"));
+		timeFrom=LocalDateTime.now().minusHours(conf.rest.get(0).fromMinus).format(DateTimeFormatter.ofPattern("YYYY-MM-dd HH:mm:ss"));
+		timeTo=LocalDateTime.now().plusHours(conf.rest.get(0).toPlus).format(DateTimeFormatter.ofPattern("YYYY-MM-dd HH:mm:ss"));
 		/**/
 		
 		/**/
@@ -51,31 +53,46 @@ public class Connector
 		docTypes.put("DP_PDOTPR", null);
 		/**/
 		
-		System.out.println(conf.toString());
-		handleDocs();
+		handleDocs();	
 		
 		
 		log.info("end");
-	}
+	}	
+	
 	private void handleDocs()
 	{
 		for (String fileName : controller.getList("DP_IZVPOL_")) 
 			controller.removeSoapDoc(fileName);
-		for (String uuid : controller.getEventUUIDList(timeFrom, timeTo, EventListMode.ESF_UPD, docTypes.keySet()))
-			if(controller.confirmEdoDoc(uuid))
+		
+		List<String>files=new LinkedList<String>();
+		if(conf.tickets.mode.equals("soap"))
+			files=controller.getList(docTypes.keySet());
+		else if(conf.tickets.mode.equals("rest"))
+			files=controller.getEventUUIDList(timeFrom, timeTo, EventListMode.ESF_UPD, docTypes.keySet());
+		for (String uuid : files) 
+		{
+			String docType=docTypes.get(controller.getEventType(uuid));
+			if(docType!=null)
 			{
-				for (String fileName : controller.getList(uuid))
-					controller.removeSoapDoc(fileName);
-				String docType=docTypes.get(controller.getEventType(uuid));
-				if(docType!=null)
+				byte[]docBody=controller.getDocContent(uuid);
+				String fileName=docType+uuid+".xml";
+				if(controller.sendSoapDoc(fileName, docBody))
 				{
-					/*if(docType=="upd_" || docType=="ukd_")
-						controller.confirmUpdUkdTitul(uuid);*/
-					byte[]docBody=controller.getDocContent(uuid);
-					String fileName=docType+uuid+".xml";
-					controller.sendSoapDoc(fileName, docBody);
+					if(controller.confirmEdoDoc(uuid))
+					{
+						for (String name : controller.getList(uuid))
+							controller.removeSoapDoc(name);						
+					}
+				}
+			}else
+			{
+				if(controller.confirmEdoDoc(uuid))
+				{
+					for (String name : controller.getList(uuid))
+						controller.removeSoapDoc(name);						
 				}
 			}
+		}	
 	}	
 	
 
