@@ -1,7 +1,7 @@
-
 package org.exite;
 
 import java.io.FileInputStream;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -10,13 +10,12 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.Unmarshaller;
-
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 import org.exite.obj.Config;
 import org.exite.obj.EventListMode;
+import org.exite.obj.SystemStatus;
+import org.exite.utils.Parser;
 
 public class Connector 
 {
@@ -32,37 +31,49 @@ public class Connector
 	
 	public Connector() 
 	{		
-		conf=getConfig();
-		log.info("start");
-		conf.cryptex.signer.checkFromCertSigner(conf.cryptex);		
-		controller=new Controller(conf);
-		/**/
-		timeFrom=LocalDateTime.now().minusHours(conf.rest.get(0).fromMinus).format(DateTimeFormatter.ofPattern("YYYY-MM-dd HH:mm:ss"));
-		timeTo=LocalDateTime.now().plusHours(conf.rest.get(0).toPlus).format(DateTimeFormatter.ofPattern("YYYY-MM-dd HH:mm:ss"));
-		/**/
 		
-		/**/
-		docTypes=new HashMap<String,String>();		
-		if(LocalDateTime.now().isBefore(LocalDateTime.of(2017, 07, 01, 00, 00)))
+		do 
 		{
-			docTypes.put("ON_SFAKT", "sfakt_");
-			docTypes.put("ON_KORSFAKT", "korsfakt_");			
-		}
-		docTypes.put("ON_SCHFDOPPR", "upd_");
-		docTypes.put("ON_KORSCHFDOPPR", "ukd_");
-		docTypes.put("DP_PDOTPR", null);
-		/**/
-		
-		handleDocs();	
-		
-		
-		log.info("end");
+			conf=getConfig();
+			log.info("start");
+			conf.cryptex.signer.checkFromCertSigner(conf.cryptex);		
+			controller=new Controller(conf);
+			/**/
+			timeFrom=LocalDateTime.now().minusHours(conf.rest.get(0).fromMinus).format(DateTimeFormatter.ofPattern("YYYY-MM-dd HH:mm:ss"));
+			timeTo=LocalDateTime.now().plusHours(conf.rest.get(0).toPlus).format(DateTimeFormatter.ofPattern("YYYY-MM-dd HH:mm:ss"));
+			/**/
+			
+			/**/
+			docTypes=new HashMap<String,String>();			
+			docTypes.put("ON_SCHFDOPPR", "upd_");
+			docTypes.put("ON_KORSCHFDOPPR", "ukd_");
+			docTypes.put("DP_PDOTPR", null);
+			/**/
+			
+			try 
+			{
+				handleDocs();
+				if(conf.tickets.confirm.equals("status"))
+					handleStatuses();
+			} catch (Exception e) 
+			{
+				log.info(e);
+			}
+			log.info("end");
+			try 
+			{
+				Thread.sleep(conf.daemon.value*1000);
+			} catch (Exception e) 
+			{
+				log.info(e);
+			}
+			
+		} while (conf.daemon.enabled);	
 	}	
 	
 	private void handleDocs()
 	{
-		for (String fileName : controller.getList("DP_IZVPOL_")) 
-			controller.removeSoapDoc(fileName);
+		killSpam("DP_IZVPOL_");
 		
 		List<String>files=new LinkedList<String>();
 		if(conf.tickets.mode.equals("soap"))
@@ -78,6 +89,13 @@ public class Connector
 				String fileName=docType+uuid+".xml";
 				if(controller.sendSoapDoc(fileName, docBody))
 				{
+					/* ??? */
+					if(!conf.tickets.confirm.equals("auto"))
+					{
+						for (String name : controller.getList(uuid))
+							controller.removeSoapDoc(name);
+						continue;
+					}						
 					if(controller.confirmEdoDoc(uuid))
 					{
 						for (String name : controller.getList(uuid))
@@ -93,7 +111,33 @@ public class Connector
 				}
 			}
 		}	
-	}	
+	}
+	private void handleStatuses() throws Exception 
+	{
+		//throw new Exception("not implemented yet");
+		for (String fileName : controller.getList("EDOSTATUS_")) 
+		{
+			SystemStatus status=(SystemStatus)Parser.fromXml(controller.getDoc(fileName), SystemStatus.class);
+			//System.out.println(status);
+			if(status.STATUSCODE.equals("ERROR"))
+			{
+				controller.rejectEdoDoc(status.DOCID,status.COMMENT);			
+				
+			}
+			else
+			{
+				controller.confirmEdoDoc(status.DOCID);
+				controller.confirmUpdUkdTitul(status.DOCID);
+			}			
+			controller.removeSoapDoc(fileName);
+		}
+	}
+	
+	private void killSpam(String spam)
+	{
+		for (String fileName : controller.getList(spam)) 
+			controller.removeSoapDoc(fileName);
+	}
 	
 
 	public static void main(String[] args) throws Exception
@@ -102,18 +146,15 @@ public class Connector
 
 	}
 	private Config getConfig()
-	{
-		JAXBContext jc;
+	{		
 		try 
 		{
-			PropertyConfigurator.configure(new FileInputStream(Paths.get(System.getProperty("user.dir")).resolve("config").resolve("log4j.properties").toString()));
-			jc = JAXBContext.newInstance(Config.class);
-			Unmarshaller unm=jc.createUnmarshaller();
-			Config conf=(Config)unm.unmarshal(new FileInputStream(Paths.get(System.getProperty("user.dir")).resolve("config").resolve("config.xml").toString()));
+			PropertyConfigurator.configure(new FileInputStream(Paths.get(System.getProperty("user.dir")).resolve("config").resolve("log4j.properties").toString()));			
+			Config conf=(Config)Parser.fromXml(Files.readAllBytes(Paths.get(System.getProperty("user.dir")).resolve("config").resolve("config.xml")), Config.class);
 			return conf;
 		} catch (Exception e) 
 		{
-			log.error(e);
+			log.info(e);
 		}
 		return null;
 	}

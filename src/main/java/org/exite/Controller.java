@@ -98,6 +98,17 @@ public class Controller
 			return false;
 		}
 	}
+	public byte[]getDoc(String fileName)/*soap*/
+	{		
+		try 
+		{
+			return soapEsf.getDoc(fileName);
+		} catch (SoapExAPIException e) 
+		{
+			log.error(e.getMessage());
+			return null;
+		}
+	}
 	public byte[]getDocContent(String uuid)
 	{
 		byte[]body;
@@ -111,6 +122,25 @@ public class Controller
 			log.error(e.getMessage());
 			return null;
 		}		
+	}
+	public boolean rejectEdoDoc(String docId, String comment)/* uvutoch */
+	{		
+		try 
+		{
+			String ticket=api.generateReject(authToken, docId, conf.cryptex.signer.signer_name, conf.cryptex.signer.signer_surName, conf.cryptex.signer.signer_orgUnit, conf.cryptex.signer.signer_org_inn, comment);
+			api.sendTicket(authToken, docId, ticket, getStringSignBody(ticket));
+			log.info("["+docId+"] rejected with comment ["+comment+"] .");
+			return true;
+		} catch (RestExAPIEcxeption e) 
+		{
+			log.error(e.getMessage()+" doc uuid ["+docId+"]");
+			if(e.getMessage().contains(""))
+			{				
+				for (String fileName : getList(docId))
+					removeSoapDoc(fileName);
+			}
+			return false;
+		}	
 	}
 	public boolean confirmEdoDoc(String docId)
 	{

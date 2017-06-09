@@ -11,8 +11,11 @@ public class Tickets
 {
 	@XmlAttribute
 	public String mode;
+	@XmlAttribute
+	public String confirm;
+	
 	@Override
 	public String toString() {
-		return "Tickets [mode=" + mode + "]";
+		return "Tickets [mode=" + mode + ", confirm=" + confirm + "]";
 	}	
 }

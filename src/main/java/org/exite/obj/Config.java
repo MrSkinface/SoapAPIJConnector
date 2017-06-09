@@ -10,6 +10,8 @@ import javax.xml.bind.annotation.XmlType;
 @XmlRootElement(name="config")
 public class Config 
 {
+	@XmlElement(name="run_as_daemon")
+	public RunAsDaemon daemon;
 	@XmlElement
 	public List<Auth> soap;	
 	@XmlElement
