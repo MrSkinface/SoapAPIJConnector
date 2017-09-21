@@ -136,14 +136,12 @@ public class Connector implements Runnable {
 
 				if(conf.tickets.confirm.equals("status"))
 					handleStatuses();
-				log.info("end. Sleeping ["+sleepTime/1000+" sec] ...");
+				log.info("end. Sleeping [" + sleepTime / 1000 + " sec] ...");
 
 				Unirest.shutdown();
 				Thread.sleep(sleepTime);
-			} catch (Exception e)
-			{
+			} catch (Exception e) {
 				log.info(e);
-				execute = false;
 			}
 		}while(execute);
 	}
