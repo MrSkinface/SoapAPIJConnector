@@ -31,15 +31,10 @@
                   <mainClass>org.exite.Connector</mainClass>
                 </transformer>
               </transformers>
-              <source>1.8</source>
-              <target>1.8</target>
             </configuration>
           </execution>
         </executions>
-        <configuration>
-          <source>1.8</source>
-          <target>1.8</target>
-        </configuration>
+        <configuration />
       </plugin>
     </plugins>
   </build>

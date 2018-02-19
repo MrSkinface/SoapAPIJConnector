@@ -105,6 +105,8 @@ public class Connector implements Runnable {
 						System.out.println("valid from / to: " + c.getValidityFrom()+" - "+c.getValidityTo());
 						System.out.println("toString: " + c.toString());
 					}
+					CryptoClient.sign(null,string,"content".getBytes());
+					System.out.println("sign O.K.");
 				}
 			} else {
 				System.out.println("JCP keystorage is empty");
