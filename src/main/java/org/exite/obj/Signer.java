@@ -1,13 +1,12 @@
 package org.exite.obj;
 
+import org.exite.crypt.ECertificate;
+
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
-
-import org.exite.cryptex.client.CryptoClient;
-import org.exite.cryptex.objects.ECertificate;
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
@@ -27,31 +26,26 @@ public class Signer
 	public String toString() {
 		return "Signer [using=" + using + ", signer_org_inn=" + signer_org_inn + ", signer_name=" + signer_name
 				+ ", signer_surName=" + signer_surName + ", signer_orgUnit=" + signer_orgUnit + "]";
-	}	
-	public void checkFromCertSigner(Cryptex cryptex)
-	{
-		if(using.equals("cert"))
-		{
-			try 
-			{
-				ECertificate cert=CryptoClient.getCertificates(cryptex.password, cryptex.alias)[0];
+	}
+
+	public void checkFromCertSigner(ECertificate cert) {
+		if(using.equals("cert")) {
+			try {
 				signer_org_inn=parseInnFromCertInfo(cert.getInn());
 				signer_name=cert.getGivenname().split(" ")[0];
 				signer_surName=cert.getGivenname().split(" ")[1];
 				signer_orgUnit=cert.getTitle();
-			} catch (Exception e) 
-			{				
+			} catch (Exception e) {
 				e.printStackTrace();
 			}			
 		}
 	}
-	private String parseInnFromCertInfo(String fromCertInn)
-	{
+
+	private String parseInnFromCertInfo(String fromCertInn) {
 		String s=fromCertInn.replace("#120C", "");
 		char[]chars=s.toCharArray();
 		StringBuilder sb=new StringBuilder();		
-		for(int i=0;i<chars.length;i++)
-		{
+		for(int i=0;i<chars.length;i++) {
 			if(i%2==1)
 				sb.append(chars[i]);
 		}
