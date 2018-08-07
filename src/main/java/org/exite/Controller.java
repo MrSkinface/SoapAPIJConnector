@@ -119,16 +119,29 @@ public class Controller {
 		}
 	}
 
-	public byte[]getDocContent(String uuid) {
-		byte[]body;
-		try {
-			Entity entity=api.getContent(authToken, uuid);
-			body = Base64.getDecoder().decode(entity.body);
-			return body;
-		} catch (RestExAPIEcxeption e) {
-			log.error(e.getMessage());
-			return null;
-		}		
+    public byte[]getDocContent(String uuid){
+	    try{
+	        return getDocContent_(uuid);
+        } catch (RestExAPIEcxeption e){
+            log.error(e.getMessage());
+            if(e.getMessage().contains("Not authorized")){
+                log.warn("Try to re-authorize");
+                setupApi();
+                try{
+                    return getDocContent_(uuid);
+                } catch (RestExAPIEcxeption e1){
+                    log.error(e.getMessage());
+                    return null;
+                }
+            }
+            return null;
+        }
+    }
+
+	private byte[]getDocContent_(String uuid) throws RestExAPIEcxeption {
+        Entity entity=api.getContent(authToken, uuid);
+        byte[] body = Base64.getDecoder().decode(entity.body);
+        return body;
 	}
 
     public String getBase64TicketBody(String docUUID) throws DuplicateDocException, NoDocFoundException, RestExAPIEcxeption {
@@ -181,7 +194,13 @@ public class Controller {
 				throw new DuplicateDocException(e.getMessage(), e);
 			} else if (e.getMessage().contains("No document found")){
                 throw new NoDocFoundException(e.getMessage(), e);
-			} else {
+			} else if(e.getMessage().contains("Not authorized")){
+                log.warn("Try to re-authorize");
+                setupApi();
+                api.sendTicket(authToken, record.getUUID(), record.getBase64ticketBody(), record.getBase64ticketSign());
+                log.info("["+record.getUUID()+"] confirmed .");
+                return true;
+            } else {
                 throw e;
             }
 		}		
@@ -254,8 +273,8 @@ public class Controller {
             System.exit(500);
         }
     }
-	
-	private void setupApi() {
+
+	public void setupApi() {
 		try {
 			this.api=conf.proxy!=null?new RestExAPI(new HttpHost(conf.proxy.host, conf.proxy.port)):new RestExAPI();
 			this.authToken=api.authorize(conf.rest.get(0).login, conf.rest.get(0).password);

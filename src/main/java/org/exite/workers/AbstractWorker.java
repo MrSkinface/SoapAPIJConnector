@@ -2,6 +2,7 @@ package org.exite.workers;
 
 import org.apache.log4j.Logger;
 import org.exite.Controller;
+import org.exite.RestExAPI.RestExAPIEcxeption;
 import org.exite.obj.Config;
 import org.exite.obj.SystemStatus;
 import org.exite.utils.Parser;
@@ -57,7 +58,6 @@ public abstract class AbstractWorker {
     }
 
     protected QRecord getBody(QRecord record){
-        QRecord rec = record;
         byte[] body;
         try{
 
@@ -72,22 +72,32 @@ public abstract class AbstractWorker {
         }catch (Exception e){
             log.error(e);
         }
-        return rec;
+        return record;
     }
 
     protected QRecord getSignedTicket(QRecord record){
-        QRecord r = record;
+        String base64ticketBody = null;
+        String base64ticketSign = null;
         try{
-
-            final String base64ticketBody = controller.getBase64TicketBody(record.getUUID(), record.getRejectCommentFromStatus());
-            final String base64ticketSign = controller.getBase64TicketSign(base64ticketBody);
-            record.setBase64ticketBody(base64ticketBody);
-            record.setBase64ticketSign(base64ticketSign);
-
-        }catch (Exception e){
+            base64ticketBody = controller.getBase64TicketBody(record.getUUID(), record.getRejectCommentFromStatus());
+            base64ticketSign = controller.getBase64TicketSign(base64ticketBody);
+        } catch (RestExAPIEcxeption e){
+            if(e.getMessage().contains("Not authorized")){
+                log.warn("Try to re-authorize");
+                controller.setupApi();
+                try{
+                    base64ticketBody = controller.getBase64TicketBody(record.getUUID(), record.getRejectCommentFromStatus());
+                    base64ticketSign = controller.getBase64TicketSign(base64ticketBody);
+                } catch (Exception e1){
+                    log.error(e1);
+                }
+            }
+        } catch (Exception e){
             log.error(e);
         }
-        return r;
+        record.setBase64ticketBody(base64ticketBody);
+        record.setBase64ticketSign(base64ticketSign);
+        return record;
     }
 
     protected void checkCryptexAlive(){
