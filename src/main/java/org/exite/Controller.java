@@ -221,7 +221,7 @@ public class Controller {
 	}
 
     public byte[] getSign(final byte[] body) throws Exception {
-		return cryptex.signCAdES(body, conf.cryptex.alias, ESignType.DER);
+		return cryptex.sign(body, conf.cryptex.alias, ESignType.DER);
     }
 
     public List<String> getAliases() throws Exception {
@@ -239,20 +239,35 @@ public class Controller {
         System.out.println("\t2) [-testcrypto]\tshows all certificates in JCP storage and test them");
     }
 
-    public void testCrypto() throws Exception {
-        System.out.println("Aliases list: ");
-        for (String string : getAliases()){
-            System.out.println(string);
-            System.out.println("info:");
-            ECertificate cert = getCert(string);
-            System.out.println("valid from / to: " + cert.getValidityFrom()+" - "+cert.getValidityTo());
-            System.out.println("toString: " + cert.toString());
-            cryptex.signCAdES("test".getBytes(), string, ESignType.DER);
-            System.out.println("sign O.K.");
+    public void testCrypto() {
+        try{
+            log.info("Aliases list: ");
+            for (String string : getAliases()){
+                log.info("\t"+string);
+                log.info("info:");
+                ECertificate cert;
+                try{
+                    cert = getCert(string);
+                } catch (Exception e){
+                    log.error("ERROR while getting certificate with alias ["+string+"]: ", e);
+                    continue;
+                }
+                log.info("valid from / to: " + cert.getValidityFrom()+" - "+cert.getValidityTo());
+                log.info("toString: " + cert.toString());
+                try{
+                    cryptex.sign("test".getBytes(), string, ESignType.DER);
+                } catch (Exception e){
+                    log.error("ERROR while sign generate with certificate with alias ["+string+"]: ", e);
+                    continue;
+                }
+                log.info("sign O.K.");
+            }
+        } catch (Exception e){
+            log.error("Crypto-testing ERROR: ", e);
         }
     }
 
-    public void testConnection() throws Exception {
+    public void testConnection() {
         try {
             if(this.authToken != null){
                 System.out.println("https is O.K.");
