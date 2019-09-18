@@ -1,21 +1,18 @@
-package org.exite.obj;
+package org.exite.objects.config;
 
+import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlAccessType;
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
-public class Auth 
-{
+public class Cryptex {
+
 	@XmlElement
-	public String login;
+	public String alias;
 	@XmlElement
 	public String password;
-
-	@Override
-	public String toString() {
-		return "Auth [login=" + login + ", password=" + password + "]";
-	}		
+	@XmlElement
+	public Signer signer;
 }

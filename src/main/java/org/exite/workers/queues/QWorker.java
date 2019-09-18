@@ -1,7 +1,7 @@
 package org.exite.workers.queues;
 
 import org.exite.Controller;
-import org.exite.obj.Config;
+import org.exite.objects.config.Config;
 
 import java.util.*;
 

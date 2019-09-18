@@ -3,35 +3,33 @@ package org.exite;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
-import org.apache.log4j.Logger;
-import org.exite.obj.Config;
+import lombok.extern.slf4j.Slf4j;
+import org.exite.objects.config.Config;
 import org.exite.utils.Parser;
 import org.exite.workers.*;
 import org.exite.workers.queues.QWorker;
 import org.exite.workers.queues.Queues;
 
+@Slf4j
 public class Connector implements Runnable {
-
-	private static final Logger log=Logger.getLogger(Connector.class);
 
     private Config conf;
 	private Controller controller;
 
-    private final String[] upd_types = new String[]{"ON_SCHFDOPPR","ON_KORSCHFDOPPR"};
+    private final String[] upd_types = new String[]{"ON_SCHFDOPPR","ON_KORSCHFDOPPR","ON_NSCHFDOPPR","ON_NKORSCHFDOPPR"};
     private final String[] doc_types = new String[]{"DP_PDOTPR"};
     private final String[] to_delete_types = new String[]{"DP_IZVPOL"};
     private final String[] edo_status_types = new String[]{"EDOSTATUS"};
 	
 	public Connector() {
         try{
-
             conf=getConfig();
             controller=new Controller(conf);
             registerShutdownHook();
             new Thread(this).start();
 
         } catch (Exception e){
-            log.error(e);
+            log.error(e.getMessage(), e);
         }
 	}
 
@@ -54,7 +52,7 @@ public class Connector implements Runnable {
                     break;
             }
         } catch (Exception e){
-            log.error(e);
+            log.error(e.getMessage(), e);
         }
 	}
 
@@ -86,18 +84,15 @@ public class Connector implements Runnable {
             new Thread(new RemoveWorker(worker, Queues.TO_REMOVE)).start();
 
         } catch (Exception e){
-            log.error(e);
+            log.error(e.getMessage(), e);
         }
 	}
 
 	private void registerShutdownHook() {
-		Runtime.getRuntime().addShutdownHook(new Thread() {
-            @Override
-            public void run() {
-                conf.execute = false;
-                log.info("Received EXIT_SIGNAL");
-            }
-        });
+		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            log.info("Graceful shutdown");
+            conf.execute = false;
+        }));
 	}
 
 	public static void main(String[] args) throws Exception {
@@ -112,8 +107,7 @@ public class Connector implements Runnable {
 			Config conf=(Config)Parser.fromXml(Files.readAllBytes(Paths.get(System.getProperty("user.dir")).resolve("config").resolve("config.xml")), Config.class);
             return conf;
 		} catch (Exception e) {
-            e.printStackTrace();
-			log.error(e);
+            log.error(e.getMessage(), e);
 		}
 		return null;
 	}

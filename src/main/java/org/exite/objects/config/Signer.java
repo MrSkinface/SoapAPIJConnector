@@ -1,4 +1,4 @@
-package org.exite.obj;
+package org.exite.objects.config;
 
 import org.exite.crypt.ECertificate;
 
@@ -10,8 +10,8 @@ import javax.xml.bind.annotation.XmlRootElement;
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
-public class Signer 
-{
+public class Signer {
+
 	@XmlAttribute
 	public String using;
 	@XmlElement
@@ -22,11 +22,6 @@ public class Signer
 	public String signer_surName;
 	@XmlElement
 	public String signer_orgUnit;
-	@Override
-	public String toString() {
-		return "Signer [using=" + using + ", signer_org_inn=" + signer_org_inn + ", signer_name=" + signer_name
-				+ ", signer_surName=" + signer_surName + ", signer_orgUnit=" + signer_orgUnit + "]";
-	}
 
 	public void checkFromCertSigner(ECertificate cert) {
 		if(using.equals("cert")) {

@@ -1,6 +1,13 @@
 package org.exite.workers.queues;
 
-import org.exite.obj.SystemStatus;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpression;
+import javax.xml.xpath.XPathFactory;
+import java.io.ByteArrayInputStream;
+import java.util.Base64;
 
 /**
  * Created by levitsky on 05.03.18.
@@ -20,14 +27,16 @@ public class QRecord {
 
     private boolean sendXMLBack = false;
 
-    private SystemStatus edoStatus;
-
     public QRecord(String fileName) {
         this.fileName = fileName;
     }
 
     public String getBase64ticketBody() {
         return base64ticketBody;
+    }
+
+    public byte[] getByteArrayTicketBody(){
+        return Base64.getDecoder().decode(this.getBase64ticketBody());
     }
 
     public void setBase64ticketBody(String base64ticketBody) {
@@ -55,45 +64,8 @@ public class QRecord {
     }
 
     public boolean needBody() {
-        return getFileName().startsWith("ON_SCHFDOPPR") || getFileName().startsWith("ON_KORSCHFDOPPR") || getFileName().startsWith("EDOSTATUS");
-    }
-
-    public SystemStatus getEdoStatus() {
-        return edoStatus;
-    }
-
-    public String getDocUUIDFromStatus(){
-        try{
-            return getEdoStatus().DOCID;
-        } catch (NullPointerException e){
-            return null;
-        }
-    }
-
-    public String getRejectCommentFromStatus(){
-        try{
-            if(getEdoStatus() == null){
-                return null;
-            }
-            if(getStatusCodeFromStatus().equalsIgnoreCase("ERROR")){
-                return getEdoStatus().COMMENT;
-            }
-            return null;
-        } catch (NullPointerException e){
-            return null;
-        }
-    }
-
-    public String getStatusCodeFromStatus(){
-        try{
-            return getEdoStatus().STATUSCODE;
-        } catch (NullPointerException e){
-            return null;
-        }
-    }
-
-    public void setEdoStatus(SystemStatus edoStatus) {
-        this.edoStatus = edoStatus;
+        return getFileName().startsWith("ON_SCHFDOPPR") || getFileName().startsWith("ON_KORSCHFDOPPR") ||
+                getFileName().startsWith("ON_NSCHFDOPPR") || getFileName().startsWith("ON_NKORSCHFDOPPR");
     }
 
     public boolean isSendXMLBack() {
@@ -106,16 +78,27 @@ public class QRecord {
 
     public String getSoapSendName() {
         String prefix = null;
-        if(getFileName().startsWith("ON_SCHFDOPPR")){
+        if(getFileName().startsWith("ON_SCHFDOPPR") || getFileName().startsWith("ON_NSCHFDOPPR")){
             prefix = "upd_";
-        } else if(getFileName().startsWith("ON_KORSCHFDOPPR")){
+        } else if(getFileName().startsWith("ON_KORSCHFDOPPR") || getFileName().startsWith("ON_NKORSCHFDOPPR")){
             prefix = "ukd_";
         }
         return prefix + getUUID() + ".xml";
     }
 
     public String getUUID() {
-        return edoStatus == null ? getFileName().split("_")[5].split("\\.")[0] : getDocUUIDFromStatus();
+        return getFileName().split("_")[5].split("\\.")[0];
+    }
+
+    public String getFileNameFromTicketBody() throws Exception{
+        ByteArrayInputStream bais = new ByteArrayInputStream(getByteArrayTicketBody());
+        DocumentBuilderFactory domFactory = DocumentBuilderFactory.newInstance();
+        domFactory.setNamespaceAware(true);
+        DocumentBuilder builder = domFactory.newDocumentBuilder();
+        org.w3c.dom.Document doc = builder.parse(bais);
+        XPath xpath = XPathFactory.newInstance().newXPath();
+        XPathExpression expr = xpath.compile("/Файл/@ИдФайл");
+        return (String) expr.evaluate(doc, XPathConstants.STRING);
     }
 
     @Override

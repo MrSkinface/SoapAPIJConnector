@@ -1,4 +1,4 @@
-package org.exite.obj;
+package org.exite.objects.config;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -7,13 +7,8 @@ import javax.xml.bind.annotation.XmlRootElement;
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
-public class Tickets 
-{
+public class Tickets {
+
 	@XmlAttribute
 	public String confirm;
-	
-	@Override
-	public String toString() {
-		return "Tickets [confirm=" + confirm + "]";
-	}	
 }

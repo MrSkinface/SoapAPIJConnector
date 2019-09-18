@@ -1,4 +1,4 @@
-package org.exite.obj;
+package org.exite.objects.config;
 
 import org.exite.crypt.ECertificate;
 
@@ -10,8 +10,8 @@ import javax.xml.bind.annotation.XmlType;
 
 @XmlType
 @XmlRootElement(name="config")
-public class Config 
-{
+public class Config {
+
     public transient boolean execute = true;
 
 	@XmlElement
@@ -22,8 +22,6 @@ public class Config
 	public List<Auth> rest;
 	@XmlElement
 	public Cryptex cryptex;
-	@XmlElement
-	public Proxy proxy;
 	@XmlElement
 	public Tickets tickets;
 	@XmlElement
@@ -52,10 +50,4 @@ public class Config
             return null;
         }
     }
-
-	@Override
-	public String toString() {
-		return "Config [soap=" + soap + ", rest=" + rest + ", cryptex=" + cryptex + ", proxy=" + proxy + ", tickets="
-				+ tickets + ", logger=" + logger + "]";
-	}			
 }
