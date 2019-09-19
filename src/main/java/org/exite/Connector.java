@@ -4,7 +4,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 
 import lombok.extern.slf4j.Slf4j;
-import org.exite.objects.config.Config;
+import org.exite.beans.config.Config;
 import org.exite.utils.Parser;
 import org.exite.workers.*;
 import org.exite.workers.queues.QWorker;

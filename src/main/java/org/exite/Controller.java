@@ -1,230 +1,110 @@
 package org.exite;
 
-import java.io.UnsupportedEncodingException;
 import java.util.*;
 
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.codec.digest.DigestUtils;
+import org.exite.beans.soap.Content;
+import org.exite.beans.tickets.*;
 import org.exite.crypt.CryptEx;
 import org.exite.crypt.ECertificate;
 import org.exite.crypt.ESignType;
-import org.exite.edi.soap.*;
-import org.exite.exception.DuplicateDocException;
-import org.exite.exception.NoDocFoundException;
-import org.exite.exception.RestException;
-import org.exite.exception.SoapException;
-import org.exite.objects.config.Config;
-import org.exite.objects.rest.Entity;
-import org.exite.rest.ExiteRestAPI;
-import org.exite.rest.RestAPI;
+import org.exite.service.SoapException;
+import org.exite.beans.config.Config;
+import org.exite.service.ExiteSoap;
+import org.exite.service.ISoapService;
+import org.exite.service.tickets.TicketGenerator;
+import org.exite.utils.ZipContainer;
 import org.exite.workers.queues.QRecord;
-
-import javax.xml.ws.Service;
 
 @Slf4j
 public class Controller {
 	
 	private Config conf;
     private CryptEx cryptex;
-	
-	private RestAPI api;
-	private String authToken;
 
-    private ObjectFactory factory;
+    private ISoapService invoiceSoap;
+    private ISoapService updSoap;
 
-    private EdiLogin updUser;
-    private EdiLogin invoiceUser;
 	
-	private ExiteWs updSoapService;
-	private ExiteWs invoiceSoapService;
-	
-	public Controller(Config conf) throws Exception {
-        factory = new ObjectFactory();
-        Service srv = new ExiteWsService();
-        this.updSoapService = srv.getPort(ExiteWs.class);
-        this.invoiceSoapService = srv.getPort(ExiteWs.class);
-		this.conf=conf;		
-		setupApi();
+	public Controller(final Config conf) throws Exception {
+		this.conf = conf;
         cryptex = new CryptEx(conf.getCertStorePass());
+        this.updSoap = new ExiteSoap(conf.soap.get(0).login, conf.soap.get(0).password);
+        this.invoiceSoap = new ExiteSoap(conf.soap.get(1).login,conf.soap.get(1).password);
 	}
 
-    public List<String>getList() throws SoapException {
-	    return getList(updSoapService, updUser);
+	public List<String>uzdList(String[]filters, String extension) throws Exception {
+		return updSoap.list(filters, extension);
+	}
+
+    public void removeUzd(String fileName, boolean removewithSign) throws Exception {
+        updSoap.remove(fileName, removewithSign);
     }
 
-    public List<String>getList(final ExiteWs service, final EdiLogin user) throws SoapException {
-        GetListRequest request = factory.createGetListRequest();
-        request.setUser(user);
-        GetListResponse response = service.getList(request);
-        EdiFileList list = response.getResult();
-        if(list.getErrorCode()!=0){
-            throw new SoapException(list.getErrorMessage());
-        }
-        return  list.getList();
+    public boolean sendForConvertation(String fileName, byte[]content) throws Exception {
+	    return invoiceSoap.send(fileName, content);
     }
 
-	public List<String>getList(String filter, String extension) {
-		List<String>list=new LinkedList<>();
-		try {
-			for (String string : getList())
-				if(string.contains(filter)){
-					if(extension != null){
-						if(string.endsWith(extension)){
-							list.add(string);
-						}
-					} else {
-						list.add(string);
-					}
-				}
-		} catch (SoapException e) {
-            e.printStackTrace();
-			log.error(e.getMessage(), e);
-		}
-		return list;
-	}
+    public boolean sendSoapTicket(String fileName, byte[]content) throws Exception {
+        return updSoap.send(fileName, content);
+    }
 
-	public List<String>getList(Set<String> filterSet, String extension) {
-		List<String>list=new LinkedList<>();
-		try {
-            for(String filter : filterSet){
-                list.addAll(getList(filter, extension));
-            }
-		} catch (Exception e) {
-			log.error(e.getMessage(), e);
-		}
-		return list;
-	}
-
-	public List<String>getList(String[]filters, String extension) {
-		return getList(new HashSet<>(Arrays.asList(filters)), extension);
-	}
-
-	public boolean removeSoapDoc(String fileName) {
-		try {
-            ArchiveDocRequest request = factory.createArchiveDocRequest();
-            request.setUser(updUser);
-            request.setFileName(fileName);
-            ArchiveDocResponse response = updSoapService.archiveDoc(request);
-            EdiResponse result = response.getResult();
-            if(result.getErrorCode()!=0){
-                throw new SoapException(result.getErrorMessage());
-            }
-            log.info("[{}] removed", fileName);
-            return true;
-		} catch (SoapException e) {
-            e.printStackTrace();
-			log.error(e.getMessage(), e);
-			return false;
-		}
-	}
-
-    public void removeSoapDoc(String fileName, boolean removewithSign) {
-        removeSoapDoc(fileName);
-        if(fileName.endsWith(".xml") && removewithSign){
-            removeSoapDoc(fileName.replace(".xml",".bin"));
+    public Content getContent(String fileName) throws Exception {
+        final byte[]body = updSoap.body(fileName);
+        if(fileName.endsWith(".zip")){
+            final ZipContainer zip = new ZipContainer();
+            zip.unzip(body);
+            return Content.builder()
+                    .body(zip.getXml())
+                    .sign(zip.getBin())
+                    .build();
+        } else {
+            return Content.builder()
+                    .body(body)
+                    .sign(updSoap.body(fileName.replace(".xml", ".bin")))
+                    .build();
         }
     }
 
-    public boolean sendSoapDoc(String fileName, byte[]content) {
-	    return sendSoapDoc(invoiceSoapService, invoiceUser, fileName, content);
-    }
-
-    public boolean sendSoapTicket(String fileName, byte[]content) {
-        return sendSoapDoc(updSoapService, updUser, fileName, content);
-    }
-
-	public boolean sendSoapDoc(ExiteWs service, EdiLogin user, String fileName, byte[]content) {
-		try {
-            SendDocRequest request = factory.createSendDocRequest();
-            request.setUser(user);
-            request.setFileName(fileName);
-            request.setContent(factory.createSendDocRequestContent(content));
-            SendDocResponse response = service.sendDoc(request);
-            EdiResponse result = response.getResult();
-            if(result.getErrorCode()!=0){
-                throw new SoapException(result.getErrorMessage());
-            }
-            log.info("[{}] sent", fileName);
-            return true;
-		} catch (SoapException e) {
-		    e.printStackTrace();
-			log.error(e.getMessage(), e);
-			return false;
-		}
-	}
-
-    public byte[]getDocContent(String uuid) throws Exception {
-	    try{
-	        return getDocContent_(uuid);
-        } catch (RestException e){
-            log.error(e.getMessage(), e);
-            if(e.getMessage().contains("Not authorized")){
-                log.warn("Try to re-authorize");
-                setupApi();
-                try{
-                    return getDocContent_(uuid);
-                } catch (RestException e1){
-                    log.error(e.getMessage());
-                    return null;
-                }
-            }
-            throw e;
+    public QRecord prepareTicket(QRecord record) throws Exception {
+        final TicketGenerator generator;
+        if(record.isUPD()){
+            generator = new IzvpolForUpd(record.getFileName());
+        } else {
+            generator = new IzvpolForPdotpr();
         }
+
+        final Signer signer = Signer.builder()
+                .firstName(conf.cryptex.signer.signer_name)
+                .lastName(conf.cryptex.signer.signer_surName)
+                .position(conf.cryptex.signer.signer_orgUnit)
+                .position(conf.cryptex.signer.signer_org_inn)
+                .build();
+
+        final TicketGeneratorData ticketData = new TicketGeneratorData.Builder()
+                .setBaseTicketBody(record.getBody())
+                .setBaseTicketSign(new String(record.getSign()))
+                .setSigner(signer)
+                .build();
+
+        final byte[] ticketBody = generator.generate(ticketData);
+        final byte[] ticketSign = sign(ticketBody);
+        final String ticketName = ((IzvpolTicket) generator).getFileName();
+
+        record.setTicketName(ticketName);
+        record.setTicketBody(ticketBody);
+        record.setTicketSign(ticketSign);
+        return record;
     }
-
-	private byte[]getDocContent_(String uuid) throws RestException {
-        Entity entity=api.getContent(authToken, uuid);
-        byte[] body = Base64.getDecoder().decode(entity.getBody());
-        return body;
-	}
-
-	public String getBase64TicketBody(String docUUID) throws DuplicateDocException, NoDocFoundException, RestException {
-        try{
-            return api.generateTicket(authToken,
-                    docUUID,
-                    conf.cryptex.signer.signer_name,
-                    conf.cryptex.signer.signer_surName,
-                    conf.cryptex.signer.signer_orgUnit,
-                    conf.cryptex.signer.signer_org_inn);
-        } catch (RestException e) {
-            log.error("{} : doc uuid [{}]", e.getMessage(), docUUID);
-            if(e.getMessage().contains("already queued")) {
-                throw new DuplicateDocException(e.getMessage(), e);
-            } else if (e.getMessage().contains("No document found")){
-                throw new NoDocFoundException(e.getMessage(), e);
-            } else {
-                throw e;
-            }
-        }
-	}
-
-    public String getBase64TicketSign(String Base64TicketBody){
-        return getStringSignBody(Base64TicketBody);
-    }
-
 
 	public boolean confirmEdoDoc(QRecord record) throws Exception {
-        final String ticketName = record.getFileNameFromTicketBody().split("\\.")[0];
-        log.info("[{}] created based on [{}]", ticketName, record.getFileName());
-        if(sendSoapTicket(ticketName + ".xml", record.getByteArrayTicketBody()))
-            return sendSoapTicket(ticketName + ".bin", record.getBase64ticketSign().getBytes());
+        log.info("[{}] created based on [{}]", record.getTicketName(), record.getFileName());
+        if(sendSoapTicket(record.getTicketName() + ".xml", record.getTicketBody()))
+            return sendSoapTicket(record.getTicketName() + ".bin", Base64.getEncoder().encode(record.getTicketSign()));
         return false;
     }
 
-	private String getStringSignBody(String docBody) {
-		byte[] doc;
-		String sign=null;
-		try {
-			doc = Base64.getDecoder().decode(docBody);
-			sign = Base64.getEncoder().encodeToString(getSign(doc));
-		} catch (Exception e) {
-			e.printStackTrace();
-			log.error(e.getMessage(), e);
-		}		
-		return sign;
-	}
-
-    public byte[] getSign(final byte[] body) throws Exception {
+    public byte[] sign(final byte[] body) throws Exception {
 		return cryptex.sign(body, conf.cryptex.alias, ESignType.DER);
     }
 
@@ -273,11 +153,8 @@ public class Controller {
 
     public void testConnection() {
         try {
-            if(this.authToken != null){
-                System.out.println("https is O.K.");
-            }
-            getList(updSoapService, updUser);
-            getList(invoiceSoapService, invoiceUser);
+            updSoap.list(new String[]{}, null);
+            invoiceSoap.list(new String[]{}, null);
             System.out.println("soap is O.K.");
         } catch (SoapException e) {
             e.printStackTrace();
@@ -287,30 +164,10 @@ public class Controller {
 
     public void checkCryptexAlive(){
         try{
-            getSign("test".getBytes());
+            this.sign("test".getBytes());
         } catch (Exception e){
             log.error("[FATAL ERROR] Cryptex fails :", e);
             System.exit(500);
         }
-    }
-
-	public void setupApi() {
-		try {
-			this.api = new ExiteRestAPI();
-			this.authToken = api.authorize(conf.rest.get(0).login, conf.rest.get(0).password);
-			this.updUser = soapUser(conf.soap.get(0).login, conf.soap.get(0).password);
-			this.invoiceUser = soapUser(conf.soap.get(1).login,conf.soap.get(1).password);
-
-		} catch (Exception e){
-            e.printStackTrace();
-            log.error(e.getMessage(), e);
-        }
-	}
-
-	private EdiLogin soapUser(final String login, final String rawPass){
-	    final EdiLogin user = new EdiLogin();
-        user.setLogin(login);
-        user.setPass(DigestUtils.md5Hex(rawPass));
-	    return user;
     }
 }

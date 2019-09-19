@@ -1,6 +1,7 @@
 package org.exite.workers;
 
 import lombok.extern.slf4j.Slf4j;
+import org.exite.beans.soap.Content;
 import org.exite.workers.queues.QRecord;
 import org.exite.workers.queues.QWorker;
 import org.exite.workers.queues.Queues;
@@ -21,9 +22,14 @@ public class InWorker extends AbstractQueueWorker {
     @Override
     protected void executeQueue() throws Exception {
         QRecord record = super.get(in_queue);
-        if(record.needBody()){
-            record.setBody(controller.getDocContent(record.getUUID()));
+        try{
+            final Content content = controller.getContent(record.getFileName());
+            record.setBody(content.getBody());
+            record.setSign(content.getSign());
+            super.put(out_queue, record);
+        } catch (Exception e){
+            log.error(e.getMessage(), e);
+            super.clear(record);
         }
-        super.put(out_queue, record);
     }
 }

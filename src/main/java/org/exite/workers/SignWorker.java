@@ -23,12 +23,18 @@ public class SignWorker extends AbstractQueueWorker {
 
     @Override
     protected void executeQueue() throws Exception {
-        QRecord record = getSignedTicket(super.get(in_queue));
-        if(out_queue_upd != null){
-            record.setSendXMLBack(true);
-            super.put(out_queue_upd, record);
-        } else {
-            super.put(out_queue_tickets, record);
+        QRecord record = super.get(in_queue);
+        try{
+            record = controller.prepareTicket(record);
+            if(out_queue_upd != null){
+                record.setSendXMLBack(true);
+                super.put(out_queue_upd, record);
+            } else {
+                super.put(out_queue_tickets, record);
+            }
+        } catch (Exception e){
+            log.error(e.getMessage(), e);
+            super.clear(record);
         }
     }
 }

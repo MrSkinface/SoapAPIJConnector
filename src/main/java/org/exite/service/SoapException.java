@@ -1,4 +1,4 @@
-package org.exite.exception;
+package org.exite.service;
 
 /**
  * Created by levitsky on 04.02.19
@@ -9,9 +9,5 @@ public class SoapException extends Exception {
 
     public SoapException(String message) {
         super(message);
-    }
-
-    public SoapException(String message, Throwable cause) {
-        super(message, cause);
     }
 }

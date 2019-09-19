@@ -28,7 +28,7 @@ public class InQueueCreator extends AbstractWorker {
 
     @Override
     protected void beforeExecute() throws Exception {
-        checkCryptexAlive();
+        controller.checkCryptexAlive();
     }
 
     @Override
@@ -38,12 +38,16 @@ public class InQueueCreator extends AbstractWorker {
 
     @Override
     protected void execute() throws Exception {
-        log.info("{} for [{}] start", this.getClass().getSimpleName(), out_queue.getQueueName());
-        final List<String> files = controller.getList(types, extension);
-        for (String fileName : files) {
-            QRecord record = new QRecord(fileName);
-            super.put(out_queue, record);
+        try{
+            log.info("{} for [{}] start", this.getClass().getSimpleName(), out_queue.getQueueName());
+            final List<String> files = controller.uzdList(types, extension);
+            for (String fileName : files) {
+                QRecord record = new QRecord(fileName);
+                super.put(out_queue, record);
+            }
+            log.info("end. Waiting {} sec ...", sleepTime);
+        } catch (Exception e){
+            log.error(e.getMessage(), e);
         }
-        log.info("end. Waiting {} sec ...", sleepTime);
     }
 }

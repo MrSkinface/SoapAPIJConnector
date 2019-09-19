@@ -35,7 +35,6 @@ public abstract class Daemon implements Runnable {
 
     protected final void sleep(long seconds){
         try {
-            log.info("Sleeping {} sec", seconds);
             Thread.sleep(seconds * 1000);
         } catch (InterruptedException e) {
             log.error(e.getMessage(), e);

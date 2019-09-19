@@ -1,14 +1,18 @@
-package org.exite.objects.config;
+package org.exite.beans.config;
 
+import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlAccessType;
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
-public class Logger {
+public class Cryptex {
 
 	@XmlElement
-	public String logger;
+	public String alias;
+	@XmlElement
+	public String password;
+	@XmlElement
+	public Signer signer;
 }

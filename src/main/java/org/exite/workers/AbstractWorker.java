@@ -2,8 +2,7 @@ package org.exite.workers;
 
 import lombok.extern.slf4j.Slf4j;
 import org.exite.Controller;
-import org.exite.exception.RestException;
-import org.exite.objects.config.Config;
+import org.exite.beans.config.Config;
 import org.exite.workers.queues.QRecord;
 import org.exite.workers.queues.QWorker;
 import org.exite.workers.queues.Queues;
@@ -64,7 +63,7 @@ public abstract class AbstractWorker extends Daemon {
     }
 
     protected void waitFor(){
-        waitFor(3);
+        waitFor(1);
     }
 
     private final void waitFor(long seconds){
@@ -72,41 +71,6 @@ public abstract class AbstractWorker extends Daemon {
             Thread.currentThread().sleep(seconds * 1000);
         }catch (Exception e){
             log.error(e.getMessage(), e);
-        }
-    }
-
-    protected QRecord getSignedTicket(QRecord record){
-        String base64ticketBody = null;
-        String base64ticketSign = null;
-        try{
-            base64ticketBody = controller.getBase64TicketBody(record.getUUID());
-            base64ticketSign = controller.getBase64TicketSign(base64ticketBody);
-        } catch (RestException e){
-            if(e.getMessage().contains("Not authorized")){
-                log.warn("Try to re-authorize");
-                controller.setupApi();
-                try{
-                    base64ticketBody = controller.getBase64TicketBody(record.getUUID());
-                    base64ticketSign = controller.getBase64TicketSign(base64ticketBody);
-                } catch (Exception e1){
-                    log.error(e1.getMessage(), e1);
-                }
-            }
-        } catch (Exception e){
-            log.error(e.getMessage(), e);
-        }
-        record.setBase64ticketBody(base64ticketBody);
-        record.setBase64ticketSign(base64ticketSign);
-        return record;
-    }
-
-    protected void checkCryptexAlive(){
-        try{
-            controller.getSign("test".getBytes());
-        } catch (Exception e){
-            log.error("[FATAL ERROR] Cryptex fails :", e);
-            this.execute = false;
-            System.exit(500);
         }
     }
 

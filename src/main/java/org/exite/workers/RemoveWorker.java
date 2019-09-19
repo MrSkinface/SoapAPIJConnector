@@ -18,7 +18,12 @@ public class RemoveWorker extends AbstractQueueWorker {
     @Override
     protected void executeQueue() throws Exception {
         QRecord record = super.get(in_queue);
-        controller.removeSoapDoc(record.getFileName(), true);
-        super.clear(record);
+        try {
+            controller.removeUzd(record.getFileName(), true);
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+        } finally {
+            super.clear(record);
+        }
     }
 }

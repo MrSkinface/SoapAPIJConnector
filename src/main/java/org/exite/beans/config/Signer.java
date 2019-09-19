@@ -1,4 +1,4 @@
-package org.exite.objects.config;
+package org.exite.beans.config;
 
 import org.exite.crypt.ECertificate;
 
