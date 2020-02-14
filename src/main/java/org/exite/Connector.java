@@ -104,8 +104,7 @@ public class Connector implements Runnable {
 
 	private Config getConfig() {
 		try {
-			Config conf=(Config)Parser.fromXml(Files.readAllBytes(Paths.get(System.getProperty("user.dir")).resolve("config").resolve("config.xml")), Config.class);
-            return conf;
+            return (Config)Parser.fromXml(Files.readAllBytes(Paths.get(System.getProperty("user.dir")).resolve("config").resolve("config.xml")), Config.class);
 		} catch (Exception e) {
             log.error(e.getMessage(), e);
 		}

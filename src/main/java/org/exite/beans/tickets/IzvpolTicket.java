@@ -47,7 +47,7 @@ public abstract class IzvpolTicket {
         dpizvpol.document.signer.fio = new Fio();
         dpizvpol.document.signer.fio.first_name = data.getSigner().getFirstName();
         dpizvpol.document.signer.fio.last_name = data.getSigner().getLastName();
-
+        dpizvpol.document.signer.fio.middle_name = data.getSigner().getMiddleName();
 
         return dpizvpol;
     }

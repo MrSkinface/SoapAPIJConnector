@@ -77,8 +77,9 @@ public class Controller {
         final Signer signer = Signer.builder()
                 .firstName(conf.cryptex.signer.signer_name)
                 .lastName(conf.cryptex.signer.signer_surName)
+                .middleName(conf.cryptex.signer.signer_secondName)
                 .position(conf.cryptex.signer.signer_orgUnit)
-                .position(conf.cryptex.signer.signer_org_inn)
+                .inn(conf.cryptex.signer.signer_org_inn)
                 .build();
 
         final TicketGeneratorData ticketData = new TicketGeneratorData.Builder()

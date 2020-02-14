@@ -21,6 +21,8 @@ public class Signer {
 	@XmlElement
 	public String signer_surName;
 	@XmlElement
+	public String signer_secondName;
+	@XmlElement
 	public String signer_orgUnit;
 
 	public void checkFromCertSigner(ECertificate cert) {
@@ -28,7 +30,8 @@ public class Signer {
 			try {
 				signer_org_inn=parseInnFromCertInfo(cert.getInn());
 				signer_name=cert.getGivenname().split(" ")[0];
-				signer_surName=cert.getGivenname().split(" ")[1];
+                signer_surName=cert.getSurname();
+                signer_secondName=cert.getGivenname().split(" ")[1];
 				signer_orgUnit=cert.getTitle();
 			} catch (Exception e) {
 				e.printStackTrace();
